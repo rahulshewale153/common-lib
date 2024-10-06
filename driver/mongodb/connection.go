@@ -17,14 +17,14 @@ type MongoDBConnector struct {
 
 type MongoDBConfig struct {
 	Host     string
-	Port     string
+	Port     int
 	Username string
 	Password string
 	Database string
 }
 
 func (cfg *MongoDBConfig) GetURI() string {
-	return fmt.Sprintf("mongodb://%s:%s@%s:%s", cfg.Username, cfg.Password, cfg.Host, cfg.Port)
+	return fmt.Sprintf("mongodb://%s:%s@%s:%d", cfg.Username, cfg.Password, cfg.Host, cfg.Port)
 }
 
 // URI format: mongodb://username:password@host:port
