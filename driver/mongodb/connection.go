@@ -16,14 +16,20 @@ type MongoDBConnector struct {
 }
 
 type MongoDBConfig struct {
-	URI      string
+	Host     string
+	Port     string
+	Username string
+	Password string
 	Database string
 }
 
-//URI format: mongodb://username:password@host:port
+func (cfg *MongoDBConfig) GetURI() string {
+	return fmt.Sprintf("mongodb://%s:%s@%s:%s", cfg.Username, cfg.Password, cfg.Host, cfg.Port)
+}
 
+// URI format: mongodb://username:password@host:port
 func NewMongoDBConnector(ctx context.Context, cfg *MongoDBConfig) (*MongoDBConnector, error) {
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(cfg.URI))
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(cfg.GetURI()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to mongodb: %w", err)
 	}
