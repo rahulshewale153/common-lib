@@ -10,7 +10,7 @@ import (
 func main() {
 	mongoConfig := &mongodb.MongoDBConfig{
 		Host:     "localhost",
-		Port:     "27017",
+		Port:     27017,
 		Username: "root", // MongoDB Username
 		Password: "root", // MongoDB Password
 		Database: "admin",
