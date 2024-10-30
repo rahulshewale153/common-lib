@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
@@ -23,36 +24,81 @@ func main() {
 	}
 
 	fmt.Println("Connected to MongoDB!!!")
-
+	fsBucket, err := mongodb.NewFSBucket(conn.Client, "admin")
+	if err != nil {
+		fmt.Println("Error while creating file bucket!!!")
+		return
+	}
 	// Upload file to MongoDB
-	fileId := "file1"
+	fileName := "file1"
 	file := []byte("Hello, World!")
 	chunkSize := int32(261120)
 	metaData := map[string]string{
-		"filename": "file1",
+		"filename": fileName,
 		"mimetype": "text/plain",
 	}
 
-	objectId, err := conn.Upload(context.Background(), fileId, file, chunkSize, metaData)
+	openUploadStream, err := fsBucket.OpenUploadStream(context.Background(), fileName, chunkSize, metaData)
 	if err != nil {
-		fmt.Println("Error while uploading file to MongoDB!!!")
+		fmt.Println("Error while opening upload stream!!!")
 		return
 	}
 
+	_, err = openUploadStream.Write(file)
+	if err != nil {
+		fmt.Errorf("failed to write file data: %w", err)
+		return
+	}
+
+	//before downloading and deleting file we need to close the upload
+	openUploadStream.Close()
+
+	objectId := openUploadStream.FileID
 	fmt.Println("File uploaded successfully!!!")
 
-	//Download file from MongoDB
-	downloadedFile, err := conn.Download(context.Background(), fileId)
+	//Download file from MongoDB by file name
+	openDownloadStream, err := fsBucket.OpenDownloadStreamByName(context.Background(), fileName)
 	if err != nil {
-		fmt.Println("Error while downloading file from MongoDB!!!")
+		fmt.Println("Error while opening download stream!!!")
 		return
 	}
 
-	fmt.Println("File downloaded successfully!!!")
-	fmt.Println("File Data: ", string(downloadedFile))
+	var buf bytes.Buffer
+	// Read the file content into the buffer
+	_, err = buf.ReadFrom(openDownloadStream)
+	if err != nil {
+		fmt.Println("Error while reading download stream!!!")
+		return
+	}
+
+	openDownloadStream.Close()
+
+	fmt.Println("File downloaded successfully by file Name!!!")
+	fmt.Println("File Data: ", buf.String())
+
+	//Download file from MongoDB by fileid
+
+	openDownloadStream, err = fsBucket.OpenDownloadStreamByFileID(context.Background(), objectId)
+	if err != nil {
+		fmt.Println("Error while opening download stream!!!", err)
+		return
+	}
+
+	buf.Reset()
+	// Read the file content into the buffer
+	_, err = buf.ReadFrom(openDownloadStream)
+	if err != nil {
+		fmt.Println("Error while reading download stream!!!")
+		return
+	}
+
+	defer openDownloadStream.Close()
+
+	fmt.Println("File downloaded successfully by fileid!!!")
+	fmt.Println("File Data: ", buf.String())
 
 	// Delete file from MongoDB
-	err = conn.Delete(context.Background(), objectId)
+	err = fsBucket.Delete(context.Background(), objectId)
 	if err != nil {
 		fmt.Println("Error while deleting file from MongoDB!!!", err)
 		return
